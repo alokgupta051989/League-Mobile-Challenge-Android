@@ -1,13 +1,16 @@
 package life.league.challenge.kotlin.ui
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import life.league.challenge.kotlin.api.Repository
+import life.league.challenge.kotlin.domain.GetPostsUseCase
 import life.league.challenge.kotlin.model.Post
+import javax.inject.Inject
 
 sealed class FeedUiState {
     object Loading : FeedUiState()
@@ -15,7 +18,10 @@ sealed class FeedUiState {
     data class Error(val message: String) : FeedUiState()
 }
 
-class FeedViewModel(private val repository: Repository) : ViewModel() {
+@HiltViewModel
+class FeedViewModel @Inject constructor(
+    private val getPostsUseCase: GetPostsUseCase
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<FeedUiState>(FeedUiState.Loading)
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
@@ -32,9 +38,11 @@ class FeedViewModel(private val repository: Repository) : ViewModel() {
             }
 
             try {
-                val posts = repository.getPosts("hello", "world")
+                val posts = getPostsUseCase()
+                Log.d("FeedViewModel", "Fetched ${posts.size} posts")
                 _uiState.value = FeedUiState.Success(posts)
             } catch (e: Exception) {
+                Log.e("FeedViewModel", "Error fetching posts", e)
                 _uiState.value = FeedUiState.Error(e.message ?: "An unknown error occurred")
             } finally {
                 _isRefreshing.value = false

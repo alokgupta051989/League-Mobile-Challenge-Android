@@ -1,25 +1,26 @@
 package life.league.challenge.kotlin.api
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import android.util.Log
 import life.league.challenge.kotlin.model.Post
 import life.league.challenge.kotlin.model.mapToDomain
+import javax.inject.Inject
+import javax.inject.Singleton
 
-open class Repository(private val api: Api) {
+@Singleton
+open class Repository @Inject constructor(private val api: Api) {
 
-    open suspend fun getPosts(username: String, password: String): List<Post> = coroutineScope {
-        // 1. Login to get API key
+    open suspend fun getPosts(username: String, password: String): List<Post> {
+        Log.d("Repository", "Starting login...")
         val account = api.login(username, password)
         val token = account.apiKey ?: throw Exception("Login failed: No API key returned")
+        
+        Log.d("Repository", "Login success, fetching users...")
+        val users = api.getUsers(token)
+        
+        Log.d("Repository", "Fetching posts...")
+        val posts = api.getPosts(token)
 
-        // 2. Fetch users and posts in parallel
-        val usersDeferred = async { api.getUsers(token) }
-        val postsDeferred = async { api.getPosts(token) }
-
-        val users = usersDeferred.await()
-        val posts = postsDeferred.await()
-
-        // 3. Map to domain model
-        mapToDomain(posts, users)
+        Log.d("Repository", "Mapping to domain...")
+        return mapToDomain(posts, users)
     }
 }
