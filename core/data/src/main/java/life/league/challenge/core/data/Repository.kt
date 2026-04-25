@@ -21,6 +21,10 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Single entry point for data operations in the application.
+ * Coordinates between the Network (Retrofit), Local Database (Room), and Preferences (DataStore).
+ */
 @Singleton
 class Repository @Inject constructor(
     private val api: Api,
@@ -28,6 +32,10 @@ class Repository @Inject constructor(
     private val tokenManager: TokenManager
 ) : PostRepository {
 
+    /**
+     * Authenticates the user using Basic Auth and persists the returned API key.
+     * @throws Exception with user-friendly messages for 401 or Network issues.
+     */
     override suspend fun login(username: String, password: String) {
         try {
             Log.d("Repository", "Logging in...")
@@ -47,12 +55,18 @@ class Repository @Inject constructor(
         }
     }
 
+    /**
+     * Returns a reactive flow of posts from the local database.
+     */
     override fun getPosts(): Flow<List<Post>> {
         return postDao.getAllPosts().map { entities ->
             entities.map { it.toDomain() }
         }
     }
 
+    /**
+     * Provides a PagingData stream for efficient list rendering with Paging 3.
+     */
     override fun getPagedPosts(): Flow<PagingData<Post>> {
         return Pager(
             config = PagingConfig(
@@ -65,6 +79,10 @@ class Repository @Inject constructor(
         }
     }
 
+    /**
+     * Synchronizes the remote API data with the local database.
+     * Implements the "Single Source of Truth" pattern.
+     */
     override suspend fun syncPosts() {
         try {
             if (!isLoggedIn()) {
@@ -80,6 +98,7 @@ class Repository @Inject constructor(
             Log.d("Repository", "Mapping and caching...")
             val domainPosts = mapToDomain(posts, users)
             
+            // Refresh the cache
             postDao.deleteAllPosts()
             // Preserve the original interleaved order by passing index as sortOrder
             postDao.insertPosts(domainPosts.mapIndexed { index, post -> 
@@ -106,6 +125,10 @@ class Repository @Inject constructor(
         return tokenManager.getToken() != null
     }
 
+    /**
+     * Merges Post DTOs and User DTOs into Domain Post models.
+     * Filters out any posts that do not have a corresponding user.
+     */
     private fun mapToDomain(posts: List<PostDto>, users: List<UserDto>): List<Post> {
         val userMap = users.associateBy { it.id }
         return posts.mapNotNull { postDto ->

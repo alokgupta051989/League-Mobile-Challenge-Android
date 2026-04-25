@@ -14,6 +14,10 @@ import javax.inject.Singleton
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
 
+/**
+ * Manages the persistent storage of authentication tokens using Jetpack DataStore.
+ * Implements [TokenProvider] for injection into the network layer.
+ */
 @Singleton
 class TokenManager @Inject constructor(@ApplicationContext private val context: Context) : TokenProvider {
 
@@ -21,20 +25,32 @@ class TokenManager @Inject constructor(@ApplicationContext private val context: 
         private val API_KEY = stringPreferencesKey("api_key")
     }
 
+    /**
+     * A reactive stream of the current API key.
+     */
     val tokenFlow: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[API_KEY]
     }
 
+    /**
+     * Persists a new token to the DataStore.
+     */
     suspend fun saveToken(token: String) {
         context.dataStore.edit { preferences ->
             preferences[API_KEY] = token
         }
     }
 
+    /**
+     * Retrieves the current token. Used by [AuthInterceptor].
+     */
     override suspend fun getToken(): String? {
         return tokenFlow.first()
     }
 
+    /**
+     * Removes the current token, effectively logging out the user.
+     */
     suspend fun clearToken() {
         context.dataStore.edit { preferences ->
             preferences.remove(API_KEY)
