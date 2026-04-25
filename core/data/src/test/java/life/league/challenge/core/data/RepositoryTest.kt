@@ -2,11 +2,13 @@ package life.league.challenge.core.data
 
 import android.util.Base64
 import android.util.Log
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import life.league.challenge.core.database.PostDao
+import life.league.challenge.core.database.PostEntity
 import life.league.challenge.core.model.Account
 import life.league.challenge.core.network.api.Api
-import life.league.challenge.core.network.model.PostDto
-import life.league.challenge.core.network.model.UserDto
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -23,6 +25,7 @@ class RepositoryTest {
 
     private lateinit var repository: Repository
     private lateinit var mockApi: Api
+    private lateinit var mockPostDao: PostDao
     private lateinit var mockTokenManager: TokenManager
     private lateinit var mockedLog: MockedStatic<Log>
     private lateinit var mockedBase64: MockedStatic<Base64>
@@ -32,8 +35,9 @@ class RepositoryTest {
         mockedLog = mockStatic(Log::class.java)
         mockedBase64 = mockStatic(Base64::class.java)
         mockApi = mock()
+        mockPostDao = mock()
         mockTokenManager = mock()
-        repository = Repository(mockApi, mockTokenManager)
+        repository = Repository(mockApi, mockPostDao, mockTokenManager)
     }
 
     @After
@@ -66,14 +70,13 @@ class RepositoryTest {
     }
 
     @Test
-    fun `getPosts returns mapped domain models`() = runTest {
-        val users = listOf(UserDto(1, "name", "user", "avatar"))
-        val posts = listOf(PostDto(1, 1, "title", "body"))
+    fun `getPosts returns mapped domain models from dao`() = runTest {
+        val entities = listOf(
+            PostEntity(1, "user", "avatar", "title", "body", 0)
+        )
+        whenever(mockPostDao.getAllPosts()).thenReturn(flowOf(entities))
 
-        whenever(mockApi.getUsers()).thenReturn(users)
-        whenever(mockApi.getPosts()).thenReturn(posts)
-
-        val result = repository.getPosts()
+        val result = repository.getPosts().first()
 
         assertEquals(1, result.size)
         assertEquals("user", result[0].username)
@@ -88,9 +91,10 @@ class RepositoryTest {
     }
 
     @Test
-    fun `logout clears token`() = runTest {
+    fun `logout clears token and database`() = runTest {
         repository.logout()
         verify(mockTokenManager).clearToken()
+        verify(mockPostDao).deleteAllPosts()
     }
 }
 

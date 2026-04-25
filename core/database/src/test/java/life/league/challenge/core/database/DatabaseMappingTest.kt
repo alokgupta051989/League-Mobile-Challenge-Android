@@ -8,7 +8,7 @@ class DatabaseMappingTest {
 
     @Test
     fun `PostEntity toDomain mapping`() {
-        val entity = PostEntity(1, "user", "url", "title", "desc")
+        val entity = PostEntity(1, "user", "url", "title", "desc", 0)
         val domain = entity.toDomain()
 
         assertEquals(entity.id, domain.id)
@@ -21,12 +21,13 @@ class DatabaseMappingTest {
     @Test
     fun `Post toEntity mapping`() {
         val domain = Post(1, "user", "url", "title", "desc")
-        val entity = domain.toEntity()
+        val entity = domain.toEntity(0)
 
         assertEquals(domain.id, entity.id)
         assertEquals(domain.username, entity.username)
         assertEquals(domain.avatarUrl, entity.avatarUrl)
         assertEquals(domain.title, entity.title)
         assertEquals(domain.description, entity.description)
+        assertEquals(0, entity.sortOrder)
     }
 }
