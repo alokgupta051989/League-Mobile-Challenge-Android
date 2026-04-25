@@ -1,61 +1,63 @@
-# Unit Testing Strategy
+# Unit Testing Strategy - Version 2.0 (Hilt & Clean Architecture)
 
-This document outlines the unit testing approach, coverage, and tools used in the project.
+This document outlines the unit testing approach for Version 2.0. This version introduces Hilt for Dependency Injection and follows Clean Architecture principles, requiring more isolated testing strategies.
 
 ## 🛠 Testing Stack
 - **JUnit 4**: The core testing framework.
 - **Mockito & Mockito-Kotlin**: For mocking dependencies and verifying interactions.
 - **Kotlinx-Coroutines-Test**: For testing suspending functions and handling `CoroutineDispatcher` in tests.
-- **MockedStatic**: Used to mock static Android platform methods like `android.util.Log` and `android.util.Base64` in local unit tests.
+- **MockedStatic**: Used to mock static Android platform methods like `android.util.Log` and `android.util.Base64`.
 
 ---
 
 ## 📊 Coverage Areas
 
-The test suite is designed to cover the critical paths of the application, aiming for high reliability across all architectural layers.
-
 ### 1. Presentation Layer (`FeedViewModelTest`)
-- **Initial State**: Verifies the UI starts in a `Loading` state.
-- **Success Flow**: Ensures that when data is fetched successfully, the state transitions to `Success` with the correct data.
-- **Error Flow**: Verifies that exceptions are caught and mapped to an `Error` state with a user-friendly message.
-- **Refresh Logic**: Validates that the `isRefreshing` state is managed correctly during pull-to-refresh actions.
+- **State Management**: Verifies transitions between `Loading`, `Success`, and `Error` states.
+- **UseCase Interaction**: Ensures the `GetPostsUseCase` is called correctly.
+- **Reactive Updates**: Validates that state changes are emitted correctly via `StateFlow`.
 
 ### 2. Domain Layer (`GetPostsUseCaseTest`)
-- **Orchestration**: Ensures the UseCase correctly calls the repository with the expected parameters and returns the results.
+- **Business Logic**: Verifies that the UseCase correctly orchestrates the call to the repository with hardcoded/default credentials.
 
 ### 3. Data Layer (`RepositoryTest`)
-- **Network Flow**: Tests the sequential calls to `login`, `getUsers`, and `getPosts`.
-- **Validation**: Verifies that missing API keys or failed logins trigger the appropriate exceptions.
-- **Static Dependencies**: Handles `Base64` encoding and `Log` statements through static mocking.
+- **Network Flow**: Tests the sequence of `login` -> `getUsers` -> `getPosts`.
+- **Error Propagation**: Ensures network or authentication failures are converted to appropriate exceptions.
+- **Log Validation**: Verified repository logging behavior using `MockedStatic`.
 
-### 4. Logic & Mappers (`MappingTest`, `DatabaseMappingTest`)
-- **Data Transformation**: Verifies the complex "join" logic between Posts and Users.
-- **Filtering**: Ensures that posts without a valid author are filtered out.
-- **Integrity**: Validates that fields (id, username, title, etc.) are correctly mapped between API DTOs, Domain models, and Database entities.
+### 4. Persistence & Logic (`DatabaseMappingTest`, `MappingTest`)
+- **Data Integrity**: Ensures accurate conversion between `UserDto`/`PostDto`, `PostEntity` (DB), and `Post` (Domain).
+- **Relational Logic**: Verifies that posts and users are correctly joined based on `userId`.
 
 ---
 
 ## 🚀 How to Run Tests
 
-### Via Terminal
-Run the following command in the project root:
 ```bash
 ./gradlew :kotlin_app:testDebugUnitTest
 ```
 
-### Via Android Studio
-1. Right-click the `src/test/java` folder.
-2. Select **"Run 'Tests in 'life.league...'"**.
-3. View the results in the **Run** tool window.
-
 ---
 
-## 💡 Key Testing Decisions
+## 🚫 Excluded from Unit Testing
 
-### Handling Android Platform Dependencies
-Unit tests run on the JVM, which doesn't include Android platform code. To avoid `Method ... not mocked` errors:
-1. We used `unitTests.returnDefaultValues = true` in `build.gradle` for basic safety.
-2. For critical logic (like `Base64` or `Log`), we used `Mockito.mockStatic` to provide controlled behavior during tests.
+The following areas are intentionally excluded from unit testing for the reasons specified:
 
-### Coroutines Handling
-We use `UnconfinedTestDispatcher` in ViewModels to ensure that state changes triggered within `viewModelScope.launch` happen immediately within the test thread, making assertions reliable without manual delays.
+### 1. Simple Data Models / Entities
+- **Classes**: `Account`, `Post`, `PostDto`, `UserDto`, `PostEntity`.
+- **Reason**: These are standard Kotlin `data class`es used for data transport and storage. They contain no logic. Testing them only verifies the compiler and adds no value.
+
+### 2. Hilt Dependency Injection Modules (`di` package)
+- **Reason**: Hilt modules are configuration files. Testing them would involve verifying that a specific class is provided by a specific function, which is better handled by Hilt's own compile-time checks or through integration tests.
+
+### 3. Room Database & DAOs (`db` package)
+- **Classes**: `AppDatabase`, `PostDao`.
+- **Reason**: Testing DAOs requires an Android environment (SQLite). These should be tested using **Instrumented Tests** in the `androidTest` folder (using `In-Memory` database) rather than JVM unit tests to ensure correct SQL execution and Room behavior.
+
+### 4. Retrofit API Definitions (`api` package)
+- **Classes**: `Api`.
+- **Reason**: The interface only defines metadata for Retrofit. The actual network communication and parsing logic are infrastructure concerns. Mocking the interface in `RepositoryTest` is sufficient to verify the app's handling of network data.
+
+### 5. UI Components & Application Class
+- **Classes**: `LeagueApplication`, `FeedScreen`, `PostItem`.
+- **Reason**: These are Android Framework or Compose components. They require an emulator/device context and are better suited for Instrumented/UI tests or Screenshot tests.
