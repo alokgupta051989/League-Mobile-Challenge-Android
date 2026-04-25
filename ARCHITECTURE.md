@@ -1,24 +1,59 @@
-# Architecture Guide: Multi-Module Clean Architecture + MVVM
+# Architecture Guide: Evolution from Monolith to Multi-Module Clean Architecture
 
-This document provides a deep dive into the architectural design of the League Android Challenge application (Version 3.0), explaining the "Why" and "How" behind each layer and component.
+This document provides a deep dive into the architectural design of the League Android Challenge application across its three major versions.
 
-## 🏗 The Core Philosophy: Clean Architecture
+---
 
-The project is built on **Clean Architecture** principles, which aim to separate concerns and make the application independent of frameworks, UI, and external data sources.
+## 🏗 Architectural Evolution
 
-### The Dependency Rule
-Dependencies flow **inward** toward the **Domain Layer**. The Domain layer (the center of the circle) has no knowledge of the Data or Presentation layers.
+Version 3.0 represents a professional-grade shift to modularization, enhanced security, and production-ready data handling.
+
+| Feature | Version 1.0 | Version 2.0 | Version 3.0 (Current) | Benefit |
+| :--- | :--- | :--- | :--- | :--- |
+| **Structure** | Monolithic | Single Module | **Multi-Module** | Faster build times, strict isolation, and independent scaling. |
+| **Dependency Injection** | Manual Factory | Dagger Hilt | **Hilt (Multi-Module)** | Automated DI across all modules with clear scoping. |
+| **Data Storage** | Network only | Room Database | **Room + DataStore** | Secure, reactive token management and offline-first data. |
+| **Data Fetching** | Simple List | List + Cache | **Paging 3 + Flow** | Memory-efficient, reactive, and scalable data handling. |
+| **Authentication** | Manual logic | Basic Storage | **AuthInterceptor** | Transparent and automated security for all network calls. |
+| **UI Framework** | Basic Compose | Compose + M3 | **Modular Compose** | UI components isolated in feature modules for reusability. |
+
+---
+
+### 🟢 Version 1.0: Basic MVVM (Monolith)
+The foundation of the app, using a standard **Model-View-ViewModel** pattern within a single module.
+- **Data Flow**: `View <-> ViewModel <-> Repository <-> Network (Retrofit)`
+- **Pros**: Quick implementation, low complexity.
+- **Cons**: Difficult to test, high coupling between UI and Networking.
 
 ```text
-Presentation (UI) ──▶ Domain (Logic) ◀── Data (Infrastructure)
+[:app]
+  ├── ui/          # View & ViewModel
+  ├── repository/  # Data Logic
+  └── api/         # Networking
 ```
 
 ---
 
-## 📊 Dependency Graph
+### 🔵 Version 2.0: Single-Module Clean Architecture
+Introduced **Clean Architecture** principles and **Dependency Injection** to separate business rules from implementation details.
+- **Layers**: Presentation, Domain, and Data (all within one module).
+- **Patterns**: Use Cases (Interactors) and Repository Pattern.
+- **DI**: Dagger Hilt for automated dependency management.
+- **Persistence**: Room Database for offline caching.
 
-The following diagram illustrates how modules depend on each other. Arrows indicate an "implementation" or "api" dependency.
+```text
+[:app]
+  ├── ui/          # Presentation
+  ├── domain/      # Business Logic (Use Cases & Interfaces)
+  └── data/        # Infrastructure (Repo, Network, DB)
+```
 
+---
+
+### 🔴 Version 3.0: Multi-Module Clean Architecture (Current)
+The ultimate evolution, enforcing architectural boundaries at the **compiler level** using a 7-module structure.
+
+#### 📊 Dependency Graph (v3.0)
 ```text
        +-----------------------+
        |      :kotlin_app      | (Orchestrator / Hilt Entry)
@@ -47,102 +82,55 @@ The following diagram illustrates how modules depend on each other. Arrows indic
               +------------------+
 ```
 
----
-
-## 📂 Project Structure
-
-Below is the high-level file structure showing the responsibility of each module:
-
+#### 📂 Project Structure (v3.0)
 ```text
 root/
 ├── kotlin_app/              # Main App Module (Glue)
-│   └── main/MainActivity    # Entry point & Navigation
 ├── feature/
-│   └── feed/                # Feed Feature Module
-│       ├── ui/              # Compose Screens & Components
-│       └── FeedViewModel    # Manages UI state
+│   └── feed/                # Feed Feature Module (UI & ViewModel)
 ├── core/
 │   ├── domain/              # Business Logic (Pure Kotlin)
-│   │   ├── model/           # Domain-specific models
-│   │   ├── repository/      # Repository Interfaces
-│   │   └── usecase/         # Interactors (GetPosts, SyncPosts)
-│   ├── data/                # Data Implementation
-│   │   ├── RepositoryImpl   # Implements Repo Interfaces
-│   │   └── TokenManager     # DataStore integration
-│   ├── network/             # Network Infrastructure
-│   │   ├── api/             # Retrofit Interfaces
-│   │   └── AuthInterceptor  # Automated Token injection
-│   ├── database/            # Persistence Layer
-│   │   ├── PostDao          # Room DAOs
-│   │   └── PostEntity       # Room Entities
-│   └── model/               # Shared Data Models
-│       ├── Post             # Domain Model
-│       └── Resource         # Generic State Wrapper
+│   ├── data/                # Data Implementation & TokenManager
+│   ├── network/             # Network Infrastructure & AuthInterceptor
+│   ├── database/            # Persistence Layer (Room)
+│   └── model/               # Shared Domain & DTO Models
 ```
 
 ---
 
-## 📂 Multi-Module Breakdown
-
-In Version 3.0, these layers are enforced by **physical module boundaries**. This prevents accidental coupling and enables faster incremental builds.
+## 📂 Version 3.0 Deep Dive
 
 ### 1. Presentation Layer (`:feature:feed`)
 *   **Patterns**: MVVM + Jetpack Compose + M3.
-*   **Responsibility**: Rendering data to the screen and capturing user intent.
-*   **ViewModel**: Observes the `PagingData` stream from the Domain layer and manages UI states (`Loading`, `Success`, `Error`).
-*   **Compose**: Uses stateless components and hoisting to ensure UI code is easy to preview and test.
+*   **ViewModel**: Observes the `PagingData` stream from the Domain layer.
 
 ### 2. Domain Layer (`:core:domain`)
 *   **Patterns**: Use Cases (Interactors) + Repository Interfaces.
-*   **Responsibility**: Contains the **business logic** of the application.
-*   **Pure Kotlin**: This is a non-Android module. It uses no Android-specific libraries, making it highly testable and reusable.
-*   **Use Cases**: `GetPostsUseCase` (data observation) and `SyncPostsUseCase` (data refresh).
+*   **Pure Kotlin**: Zero Android dependencies, allowing for fast JVM testing.
 
 ### 3. Data Layer (`:core:data`, `:core:network`, `:core:database`)
-*   **Patterns**: Repository Pattern + Single Source of Truth (SSOT).
-*   **Responsibility**: Managing data from multiple sources (API, Room, DataStore).
-*   **SSOT**: The database (`:core:database`) is the single source of truth. The repository ensures that the UI always observes the database, while the network (`:core:network`) is used solely to update the cache.
-*   **Paging 3**: Implemented at the database level (`PagingSource`) and exposed through the repository.
-
-### 4. Shared Layers (`:core:model`)
-*   Contains the common data structures used by all layers, including Domain models and Network DTOs.
+*   **Single Source of Truth (SSOT)**: The database is the source of truth; the network only updates the cache.
+*   **Paging 3**: Integrated at the database level for memory-efficient loading.
 
 ---
 
 ## 🔐 Security & Networking Infrastructure
 
-### Automated Authentication
-- **`AuthInterceptor`**: A custom OkHttp interceptor that retrieves the token from `TokenManager` and injects it into every request. This keeps the network layer clean and avoids passing tokens manually.
-- **`TokenManager`**: Uses **Jetpack DataStore** (Preferences) to store the API key. It provides a reactive `Flow` of the token, allowing the app to react instantly to session changes.
-
-### Robust Error Handling
-- **Mapping**: The Data layer catches `HttpException` and `IOException` and maps them to descriptive domain-level exceptions.
-- **Auto-Logout**: A `401 Unauthorized` response automatically triggers a token cleanup, ensuring the user is prompted to re-authenticate if their session expires.
+-   **`AuthInterceptor`**: Centralized header management for automated token injection.
+-   **`TokenManager`**: Uses **Jetpack DataStore** for secure, reactive preference storage.
+-   **Error Mapping**: Converts `HttpException` and `IOException` into user-friendly domain exceptions.
 
 ---
 
-## 📦 Data Flow Example: Fetching the Feed
-
-1.  **UI**: `FeedViewModel` calls `getPostsUseCase()`.
-2.  **UseCase**: Returns a `Flow<PagingData<Post>>` from the `Repository`.
-3.  **Repository**: Configures a `Pager` that uses `PostDao.getPagedPosts()` as the `PagingSource`.
-4.  **Sync**: In parallel, `FeedViewModel` calls `syncPostsUseCase()`.
-5.  **Repository**: Fetches users and posts from the API, merges them, and saves them to **Room**.
-6.  **DB**: Room detects the update and automatically pushes the new data through the `Flow` to the UI.
+## 🧪 Testing Strategy (Modular)
+- **Unit Tests**: Domain logic and Mappers.
+- **Integration Tests**: Repository-to-Database caching flows.
+- **UI Tests**: ViewModel states and Paging data streams.
 
 ---
 
-## 🧪 Testing Strategy
-
-The modular design allows for a tiered testing approach:
-- **Unit Tests**: Domain logic (Use Cases) and Mappers.
-- **Integration Tests**: Repository logic, verifying that network data is correctly cached in the database.
-- **UI Tests**: ViewModel state transitions and Paging data collection.
-
----
-
-## ✅ Summary of Benefits
-- **Maintainability**: Clear separation of concerns makes it easy to locate and fix bugs.
-- **Scalability**: New features can be added as isolated modules without impacting existing code.
-- **Testability**: Most business and data logic can be tested on the JVM without an emulator.
-- **Reliability**: Offline-first design ensures the app remains functional in poor network conditions.
+## ✅ Summary of Benefits (v3.0)
+- **Strict Isolation**: Modules prevent accidental coupling.
+- **Parallel Compilation**: Faster build times for large teams.
+- **Reliability**: Offline-first design with Paging 3.
+- **Security**: Professional-grade authentication management.
