@@ -5,8 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import dagger.hilt.android.AndroidEntryPoint
-import life.league.challenge.kotlin.ui.FeedScreen
-import life.league.challenge.kotlin.ui.FeedViewModel
+import life.league.challenge.feature.feed.FeedScreen
+import life.league.challenge.feature.feed.FeedViewModel
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
