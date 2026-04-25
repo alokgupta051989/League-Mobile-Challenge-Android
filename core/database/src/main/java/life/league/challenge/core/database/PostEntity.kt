@@ -10,7 +10,8 @@ data class PostEntity(
     val username: String,
     val avatarUrl: String,
     val title: String,
-    val description: String
+    val description: String,
+    val sortOrder: Int // Added to preserve API order
 )
 
 fun PostEntity.toDomain() = Post(
@@ -21,10 +22,11 @@ fun PostEntity.toDomain() = Post(
     description = description
 )
 
-fun Post.toEntity() = PostEntity(
+fun Post.toEntity(sortOrder: Int) = PostEntity(
     id = id,
     username = username,
     avatarUrl = avatarUrl,
     title = title,
-    description = description
+    description = description,
+    sortOrder = sortOrder
 )

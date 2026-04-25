@@ -81,7 +81,10 @@ class Repository @Inject constructor(
             val domainPosts = mapToDomain(posts, users)
             
             postDao.deleteAllPosts()
-            postDao.insertPosts(domainPosts.map { it.toEntity() })
+            // Preserve the original interleaved order by passing index as sortOrder
+            postDao.insertPosts(domainPosts.mapIndexed { index, post -> 
+                post.toEntity(sortOrder = index) 
+            })
             
         } catch (e: HttpException) {
             if (e.code() == 401) {

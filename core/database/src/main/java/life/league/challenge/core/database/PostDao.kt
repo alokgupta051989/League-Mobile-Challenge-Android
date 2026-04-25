@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PostDao {
-    @Query("SELECT * FROM posts")
+    @Query("SELECT * FROM posts ORDER BY sortOrder ASC")
     fun getAllPosts(): Flow<List<PostEntity>>
 
-    @Query("SELECT * FROM posts")
+    @Query("SELECT * FROM posts ORDER BY sortOrder ASC")
     fun getPagedPosts(): PagingSource<Int, PostEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -22,7 +22,9 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "league_db"
-        ).build()
+        )
+        .fallbackToDestructiveMigration() // Handle schema changes by clearing the database
+        .build()
     }
 
     @Provides
