@@ -16,12 +16,17 @@ To support large-scale development and faster build times, the application has b
 
 ### 2. Enhanced Security & Authentication
 - **Secure Token Management**: Replaced standard Preferences with **Jetpack DataStore** for reactive and more secure storage of the `api_key`.
-- **Automated Auth Interceptor**: Integrated an `AuthInterceptor` in the OkHttp pipeline that automatically injects the `x-access-token` header, ensuring all network calls are authenticated seamlessly.
-- **Token Provider Pattern**: Decoupled token retrieval from the network layer for better testability and cleaner architecture.
+- **Automated Auth Interceptor**: Integrated an `AuthInterceptor` in the OkHttp pipeline that automatically injects the `x-access-token` header.
+- **Separated Login Logic**: Decoupled the login process from data fetching using a dedicated `LoginUseCase`.
 
-### 3. Build & Tooling Optimization
-- **Consistent JVM Toolchain**: Unified the build environment using `jvmToolchain(11)` across all modules to resolve complex `jlink` and compatibility issues.
-- **Optimized Dependencies**: Each module declares only the dependencies it needs, reducing the final APK size and improving incremental compilation.
+### 3. Robust Error Handling & Stability
+- **Structured Error Mapping**: Implemented comprehensive error catching in the Data layer, converting `HttpException` and `IOException` into user-friendly messages.
+- **Descriptive UI States**: The UI now reacts to specific failure scenarios (e.g., "Invalid Credentials", "Network Error") with clear feedback.
+- **Comprehensive Unit Testing**: Updated the entire test suite to cover the new multi-module logic, including Repository and UseCase orchestration.
+
+### 4. Build & Tooling Optimization
+- **Consistent JVM Toolchain**: Unified the build environment using `jvmToolchain(11)` across all modules to resolve `jlink` and compatibility issues.
+- **Optimized Dependencies**: Each module declares only its required dependencies, reducing APK size and improving compilation times.
 
 ---
 
@@ -51,14 +56,6 @@ To support large-scale development and faster build times, the application has b
 
 ---
 
-## 📋 Build & Run
-1. Open the project in **Android Studio (Ladybug or newer)**.
-2. Ensure you have **JDK 11** installed and configured in your Gradle settings.
-3. Sync Project with Gradle Files.
-4. Run the `:kotlin_app` module.
-
----
-
 ## 📜 Documentation History
-- [View Version 2.0 Documentation (Single Module Clean Architecture)](README_v2.md)
-- [View Version 1.0 Documentation (Basic MVVM)](README_v1.md)
+- [View Version 2.0 Documentation](README_v2.md)
+- [View Version 1.0 Documentation](README_v1.md)

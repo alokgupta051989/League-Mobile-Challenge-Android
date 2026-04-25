@@ -14,6 +14,7 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.MockedStatic
 import org.mockito.Mockito.mockStatic
+import org.mockito.Mockito.verify
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -42,64 +43,54 @@ class RepositoryTest {
     }
 
     @Test
-    fun `getPosts success with login`() = runTest {
+    fun `login success saves token`() = runTest {
         val account = Account(apiKey = "token")
-        val users = listOf(UserDto(1, "name", "user", "avatar"))
-        val posts = listOf(PostDto(1, 101, "title", "body"))
-
-        whenever(mockTokenManager.getToken()).thenReturn(null)
         whenever(Base64.encodeToString(any(), any())).thenReturn("encoded")
         whenever(mockApi.login("Basic encoded")).thenReturn(account)
-        whenever(mockApi.getUsers()).thenReturn(users)
-        whenever(mockApi.getPosts()).thenReturn(posts)
 
-        val result = repository.getPosts("user", "pass")
+        repository.login("user", "pass")
 
-        assertEquals(1, result.size)
-        assertEquals("user", result[0].username)
+        verify(mockTokenManager).saveToken("token")
     }
 
     @Test
-    fun `getPosts success with cached token`() = runTest {
-        val users = listOf(UserDto(1, "name", "user", "avatar"))
-        val posts = listOf(PostDto(1, 101, "title", "body"))
-
-        whenever(mockTokenManager.getToken()).thenReturn("cached_token")
-        whenever(mockApi.getUsers()).thenReturn(users)
-        whenever(mockApi.getPosts()).thenReturn(posts)
-
-        val result = repository.getPosts("user", "pass")
-
-        assertEquals(1, result.size)
-        assertEquals("user", result[0].username)
-    }
-
-    @Test
-    fun `getPosts failure on login throws exception`() = runTest {
-        whenever(mockTokenManager.getToken()).thenReturn(null)
-        whenever(Base64.encodeToString(any(), any())).thenReturn("encoded")
-        whenever(mockApi.login("Basic encoded")).thenThrow(RuntimeException("Login Failed"))
-
-        assertThrows(RuntimeException::class.java) {
-            runBlocking {
-                repository.getPosts("user", "pass")
-            }
-        }
-    }
-
-    @Test
-    fun `getPosts failure on empty api key throws exception`() = runTest {
+    fun `login failure with empty api key throws exception`() = runTest {
         val account = Account(apiKey = null)
-        whenever(mockTokenManager.getToken()).thenReturn(null)
         whenever(Base64.encodeToString(any(), any())).thenReturn("encoded")
         whenever(mockApi.login("Basic encoded")).thenReturn(account)
 
         val exception = assertThrows(Exception::class.java) {
-            runBlocking {
-                repository.getPosts("user", "pass")
-            }
+            runBlocking { repository.login("user", "pass") }
         }
         assertEquals("Login failed: No API key returned", exception.message)
+    }
+
+    @Test
+    fun `getPosts returns mapped domain models`() = runTest {
+        val users = listOf(UserDto(1, "name", "user", "avatar"))
+        val posts = listOf(PostDto(1, 1, "title", "body"))
+
+        whenever(mockApi.getUsers()).thenReturn(users)
+        whenever(mockApi.getPosts()).thenReturn(posts)
+
+        val result = repository.getPosts()
+
+        assertEquals(1, result.size)
+        assertEquals("user", result[0].username)
+        assertEquals("title", result[0].title)
+    }
+
+    @Test
+    fun `isLoggedIn returns true when token exists`() = runTest {
+        whenever(mockTokenManager.getToken()).thenReturn("token")
+        val result = repository.isLoggedIn()
+        assertEquals(true, result)
+    }
+
+    @Test
+    fun `logout clears token`() = runTest {
+        repository.logout()
+        verify(mockTokenManager).clearToken()
     }
 }
 
