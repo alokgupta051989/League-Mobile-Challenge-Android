@@ -7,8 +7,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import life.league.challenge.core.domain.usecase.GetPostsUseCase
+import life.league.challenge.core.domain.usecase.SyncPostsUseCase
 import life.league.challenge.core.model.Post
 import javax.inject.Inject
 
@@ -20,7 +22,8 @@ sealed class FeedUiState {
 
 @HiltViewModel
 class FeedViewModel @Inject constructor(
-    private val getPostsUseCase: GetPostsUseCase
+    private val getPostsUseCase: GetPostsUseCase,
+    private val syncPostsUseCase: SyncPostsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<FeedUiState>(FeedUiState.Loading)
@@ -29,21 +32,41 @@ class FeedViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    init {
+        observePosts()
+        fetchPosts()
+    }
+
+    private fun observePosts() {
+        viewModelScope.launch {
+            getPostsUseCase()
+                .catch { e ->
+                    _uiState.value = FeedUiState.Error(e.message ?: "Error observing database")
+                }
+                .collect { posts ->
+                    if (posts.isNotEmpty()) {
+                        _uiState.value = FeedUiState.Success(posts)
+                    }
+                }
+        }
+    }
+
     fun fetchPosts(isRefresh: Boolean = false) {
         viewModelScope.launch {
             if (isRefresh) {
                 _isRefreshing.value = true
-            } else {
+            } else if (_uiState.value !is FeedUiState.Success) {
                 _uiState.value = FeedUiState.Loading
             }
 
             try {
-                val posts = getPostsUseCase()
-                Log.d("FeedViewModel", "Fetched ${posts.size} posts")
-                _uiState.value = FeedUiState.Success(posts)
+                syncPostsUseCase()
+                Log.d("FeedViewModel", "Sync success")
             } catch (e: Exception) {
-                Log.e("FeedViewModel", "Error fetching posts", e)
-                _uiState.value = FeedUiState.Error(e.message ?: "An unknown error occurred")
+                Log.e("FeedViewModel", "Error syncing posts", e)
+                if (_uiState.value !is FeedUiState.Success) {
+                    _uiState.value = FeedUiState.Error(e.message ?: "An unknown error occurred")
+                }
             } finally {
                 _isRefreshing.value = false
             }

@@ -39,6 +39,10 @@ dependencies {
     implementation "androidx.compose.ui:ui"
     implementation "androidx.compose.material3:material3"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4"
+    
+    // Paging
+    implementation "androidx.paging:paging-runtime:3.3.1"
+    implementation "androidx.paging:paging-compose:3.3.1"
 
     // Hilt
     implementation "com.google.dagger:hilt-android:2.51.1"

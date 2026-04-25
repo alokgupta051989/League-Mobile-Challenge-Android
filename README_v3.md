@@ -19,12 +19,17 @@ To support large-scale development and faster build times, the application has b
 - **Automated Auth Interceptor**: Integrated an `AuthInterceptor` in the OkHttp pipeline that automatically injects the `x-access-token` header.
 - **Separated Login Logic**: Decoupled the login process from data fetching using a dedicated `LoginUseCase`.
 
-### 3. Robust Error Handling & Stability
+### 3. Offline-First & Scalable Data Fetching
+- **Room Single Source of Truth**: Re-integrated the local database. The UI now observes a reactive stream from Room, ensuring the app works perfectly offline.
+- **Paging 3 Integration**: Implemented Paging 3 for the feed, allowing the app to handle large datasets efficiently with minimal memory overhead.
+- **Automatic Sync**: The app automatically synchronizes data from the network and updates the local cache, providing a seamless user experience.
+
+### 4. Robust Error Handling & Stability
 - **Structured Error Mapping**: Implemented comprehensive error catching in the Data layer, converting `HttpException` and `IOException` into user-friendly messages.
 - **Descriptive UI States**: The UI now reacts to specific failure scenarios (e.g., "Invalid Credentials", "Network Error") with clear feedback.
 - **Comprehensive Unit Testing**: Updated the entire test suite to cover the new multi-module logic, including Repository and UseCase orchestration.
 
-### 4. Build & Tooling Optimization
+### 5. Build & Tooling Optimization
 - **Consistent JVM Toolchain**: Unified the build environment using `jvmToolchain(11)` across all modules to resolve `jlink` and compatibility issues.
 - **Optimized Dependencies**: Each module declares only its required dependencies, reducing APK size and improving compilation times.
 
@@ -49,6 +54,7 @@ To support large-scale development and faster build times, the application has b
 ## 🛠 Key Technologies
 - **Jetpack Compose**: Modern declarative UI.
 - **Dagger Hilt**: Multi-module dependency injection.
+- **Paging 3**: Efficient list management and pagination.
 - **Coroutines & Flow**: For reactive, non-blocking programming.
 - **Retrofit & OkHttp**: For robust networking.
 - **Room**: For local SQLite persistence.
